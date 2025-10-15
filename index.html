@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Remo – Lobby gry</title>
+  <style>
+    body {
+      font-family: "Poppins", Arial, sans-serif;
+      background: linear-gradient(135deg, #74b9ff, #a29bfe);
+      color: #2d3436;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    header {
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2.2em;
+    }
+
+    main {
+      margin-top: 40px;
+    }
+
+    .game-box {
+      background-color: rgba(255, 255, 255, 0.95);
+      display: inline-block;
+      padding: 30px 40px;
+      border-radius: 20px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      min-width: 320px;
+      max-width: 600px;
+    }
+
+    select, input {
+      padding: 10px;
+      font-size: 1.1em;
+      border-radius: 8px;
+      border: 2px solid #0984e3;
+      margin: 10px;
+      width: 80%;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1.1em;
+      background-color: #0984e3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      margin-top: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #74b9ff;
+      transform: scale(1.05);
+    }
+
+    #lobby {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    #playerList, #chatBox {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      padding: 20px;
+      width: 250px;
+      height: 250px;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: left;
+    }
+
+    #chatBox p {
+      margin: 4px 0;
+    }
+
+    footer {
+      margin-top: 50px;
+      background-color: rgba(255, 255, 255, 0.7);
+      padding: 10px;
+      font-size: 0.9em;
+    }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎮 Remo – Lobby Gry 🎮</h1>
+  </header>
+
+  <main>
+    <!-- MENU GŁÓWNE -->
+    <div id="menu" class="game-box">
+      <h2>Wybierz grę:</h2>
+      <select id="gameSelect">
+        <option value="guess">🔢 Odgadywanie numerów</option>
+      </select>
+      <br>
+      <button onclick="chooseGame()">Dalej ▶️</button>
+    </div>
+
+    <!-- LOBBY -->
+    <div id="lobbyMenu" class="game-box hidden">
+      <h2>Wybierz tryb</h2>
+      <button onclick="createLobby()">➕ Stwórz lobby</button>
+      <button onclick="joinLobby()">🔗 Dołącz do lobby</button>
+    </div>
+
+    <!-- TWORZENIE LOBBY -->
+    <div id="create" class="game-box hidden">
+      <h2>Utworzono lobby 🎉</h2>
+      <p>Kod pokoju: <b id="roomCode"></b></p>
+      <div id="lobby">
+        <div id="playerList">
+          <h3>👥 Gracze:</h3>
+          <ul id="players">
+            <li><b>Ty (Host)</b></li>
+          </ul>
+          <button id="startGameBtn" onclick="startGame()">🚀 Start gry</button>
+        </div>
+        <div id="chatBox">
+          <h3>💬 Czat</h3>
+          <div id="messages"></div>
+          <input id="chatInput" placeholder="Napisz wiadomość...">
+          <button onclick="sendMessage()">Wyślij</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOŁĄCZ DO LOBBY -->
+    <div id="join" class="game-box hidden">
+      <h2>Dołącz do lobby</h2>
+      <input id="joinCode" placeholder="Wpisz kod pokoju">
+      <button onclick="connectToLobby()">Dołącz</button>
+    </div>
+
+    <!-- GŁÓWNA GRA -->
+    <div id="game" class="game-box hidden">
+      <h2>🎯 Odgadywanie numerów</h2>
+      <p>Podaj liczbę od 1 do 100:</p>
+      <input id="guess" type="number" min="1" max="100">
+      <br>
+      <button onclick="checkGuess()">Sprawdź</button>
+      <p id="message"></p>
+      <button id="restart" onclick="restartGame()" class="hidden">Zagraj ponownie 🔁</button>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2025 Remo L</p>
+  </footer>
+
+  <script>
+    let secret = null;
+    let attempts = 0;
+    let roomCode = "";
+    let isHost = false;
+
+    function chooseGame() {
+      document.getElementById('menu').classList.add('hidden');
+      document.getElementById('lobbyMenu').classList.remove('hidden');
+    }
+
+    function createLobby() {
+      isHost = true;
+      roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+      document.getElementById('roomCode').textContent = roomCode;
+      document.getElementById('lobbyMenu').classList.add('hidden');
+      document.getElementById('create').classList.remove('hidden');
+    }
+
+    function joinLobby() {
+      document.getElementById('lobbyMenu').classList.add('hidden');
+      document.getElementById('join').classList.remove('hidden');
+    }
+
+    function connectToLobby() {
+      const code = document.getElementById('joinCode').value.trim().toUpperCase();
+      if (!code) return alert("Podaj kod pokoju!");
+      alert("Symulacja połączenia: dołączono do lobby " + code);
+      document.getElementById('join').classList.add('hidden');
+      document.getElementById('create').classList.remove('hidden');
+      const players = document.getElementById('players');
+      const li = document.createElement('li');
+      li.textContent = "Gracz 2";
+      players.appendChild(li);
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const msgBox = document.getElementById('messages');
+      if (input.value.trim() === "") return;
+      const msg = document.createElement('p');
+      msg.innerHTML = `<b>Ty:</b> ${input.value}`;
+      msgBox.appendChild(msg);
+      input.value = "";
+      msgBox.scrollTop = msgBox.scrollHeight;
+    }
+
+    function startGame() {
+      secret = Math.floor(Math.random() * 100) + 1;
+      document.getElementById('create').classList.add('hidden');
+      document.getElementById('game').classList.remove('hidden');
+    }
+
+    function checkGuess() {
+      const guess = Number(document.getElementById('guess').value);
+      const msg = document.getElementById('message');
+      attempts++;
+
+      if (!guess || guess < 1 || guess > 100) {
+        msg.textContent = "⚠️ Podaj liczbę od 1 do 100!";
+        msg.style.color = "orange";
+        return;
+      }
+
+      if (guess === secret) {
+        msg.textContent = `🎉 Brawo! Trafiłeś w ${attempts} próbach!`;
+        msg.style.color = "green";
+        document.getElementById('restart').classList.remove('hidden');
+      } else if (guess > secret) {
+        msg.textContent = "📉 Za dużo!";
+        msg.style.color = "red";
+      } else {
+        msg.textContent = "📈 Za mało!";
+        msg.style.color = "blue";
+      }
+    }
+
+    function restartGame() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>
